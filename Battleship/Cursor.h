@@ -54,6 +54,129 @@ public:
 	/// <returns></returns>
 	xy GetCursorPosition() { return cursorPos; }
 	/// <summary>
+	/// Checks for an input then updates the cursor and either moves, rotates or peforms an action depending on the key pressed
+	/// </summary>
+	void CursorUpdate(EnemyAI* ai)
+	{
+		if (Key(PRESSEDTHISFRAME, R)) // Checks for R key and rotates
+		{
+			if (!isTargeting)
+				RotateCursor(Controller::GetGrid(selectedGrid));
+		}
+
+		// Checks for a direction key, using PRESSED so you can hold the key
+		if (Key(PRESSED, KEY_UP))
+		{
+			MoveCursor(UP, Controller::GetGrid(selectedGrid));
+		}
+		if (Key(PRESSED, KEY_DOWN))
+		{
+			MoveCursor(DOWN, Controller::GetGrid(selectedGrid));
+		}
+		if (Key(PRESSED, KEY_LEFT))
+		{
+			MoveCursor(LEFT, Controller::GetGrid(selectedGrid));
+		}
+		if (Key(PRESSED, KEY_RIGHT))
+		{
+			MoveCursor(RIGHT, Controller::GetGrid(selectedGrid));
+		}
+		if (Key(PRESSEDTHISFRAME, ESCAPE))
+		{
+			Controller::SetEndGame(true);
+		}
+		if (Key(PRESSEDTHISFRAME, ONE) && isTargeting)
+		{
+			Weapons::ChangeShell();
+			if (Weapons::GetWeaponType() == 4) // Sets the entire grid to cursor
+			{
+				for (int y = 0; y < 10; y++)
+					for (int x = 0; x < 10; x++)
+						Controller::EditGrid(selectedGrid, x, y, 4);
+			}
+			else // Resets the grid back to normal
+			{
+				for (int y = 0; y < 10; y++)
+					for (int x = 0; x < 10; x++)
+						Controller::EditGrid(selectedGrid, x, y, oldMatrixData.data[x][y]);
+
+				Controller::EditGrid(selectedGrid, cursorPos.x(), cursorPos.y(), 4);
+			}
+			system("cls"); //Clears & Regenerates the Grid
+			Renderer::GenerateGrid(cursorPos.y(), cursorPos.x());
+		}
+		if (Key(PRESSEDTHISFRAME, TWO) && isTargeting)
+		{
+			if (isTargeting && Controller::GetDifficulty() > 1)
+			{
+				if (Weapons::GetWeaponType() < 2)
+					Controller::GetGrid(selectedGrid)->data[cursorPos.x()][cursorPos.y()] = oldMatrixData.data[cursorPos.x()][cursorPos.y()]; // Sets the cursor value back to the original value
+				else // Resets the whole grid back to the original matrix
+				{
+					for (int y = 0; y < 10; y++)
+						for (int x = 0; x < 10; x++)
+							Controller::EditGrid(selectedGrid, x, y, oldMatrixData.data[x][y]);
+				}
+
+				if (Controller::GetDifficulty() == 2) // Changes grid and resets back to the first grid depending on difficultys
+					if (selectedGrid >= 2)
+						selectedGrid = 1;
+					else
+						selectedGrid++;
+				else
+					if (selectedGrid >= 4)
+						selectedGrid = 1;
+					else
+						selectedGrid++;
+				oldMatrixData = *Controller::GetGrid(selectedGrid); // Sets old matrix data to the new grid
+				if (Weapons::GetWeaponType() != 4)
+					Controller::GetGrid(selectedGrid)->data[cursorPos.x()][cursorPos.y()] = 4; // Applies a cursor
+				else // Changes entire grid to cursor
+				{
+					for (int y = 0; y < 10; y++)
+						for (int x = 0; x < 10; x++)
+							Controller::EditGrid(selectedGrid, x, y, 4);
+				}
+				system("cls"); //Clears & Regenerates the Grid
+				Renderer::GenerateGrid(cursorPos.y(), cursorPos.x());
+			}
+		}
+
+		//Peforms an action depending on if you're in targeting mode or not
+		if (Key(PRESSEDTHISFRAME, ENTER))
+		{
+			if (!isTargeting)
+				InsertShip(Controller::GetGrid(selectedGrid));
+			else
+			{
+				Weapons::ShootCoordinates(cursorPos.x(), cursorPos.y()); //Sets the coordinates of the fire location in Weapons
+				switch (Weapons::GetWeaponType()) // Shoots associated weapon depending on the selected weapon
+				{
+				case 0:
+					Weapons::ShootDefaultShell(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
+					cursorLen = 0;
+					break;
+				case 1:
+					Weapons::ShootMissile(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
+					cursorLen = 0;
+					break;
+				case 2:
+					Weapons::ShootRadarShell(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
+					cursorLen = 0;
+					break;
+				case 3:
+					Weapons::AirStrike(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
+					cursorLen = 0;
+					break;
+				case 4:
+					Weapons::NuclearBomb(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
+					cursorLen = 100;
+					break;
+				}
+			}
+		}
+	}
+	/// <summary>
 	/// Moves the cursor by taking a direction and moving the cursor by 1 in that direction before printing the grid again with the new data values.
 	/// </summary>
 	/// <param name="direction">Whether to move the cursor up, down, left or right</param>
@@ -184,132 +307,11 @@ public:
 		}
 		if (xLocked || yLocked)
 			return true;
+		else
+			return false;
 	}
 
-	/// <summary>
-	/// Checks for an input then updates the cursor and either moves, rotates or peforms an action depending on the key pressed
-	/// </summary>
-	/// <param name="mat">The grid to pass through</param>
-	void CursorUpdate(EnemyAI* ai)
-	{
-		if (Key(PRESSEDTHISFRAME, R)) // Checks for R key and rotates
-		{
-			if (!isTargeting)
-				RotateCursor(Controller::GetGrid(selectedGrid));
-		}
-
-		// Checks for a direction key, using PRESSED so you can hold the key
-		if (Key(PRESSED, KEY_UP))
-		{
-			MoveCursor(UP, Controller::GetGrid(selectedGrid));
-		}
-		if (Key(PRESSED, KEY_DOWN))
-		{
-			MoveCursor(DOWN, Controller::GetGrid(selectedGrid));
-		}
-		if (Key(PRESSED, KEY_LEFT))
-		{
-			MoveCursor(LEFT, Controller::GetGrid(selectedGrid));
-		}
-		if (Key(PRESSED, KEY_RIGHT))
-		{
-			MoveCursor(RIGHT, Controller::GetGrid(selectedGrid));
-		}
-		if (Key(PRESSEDTHISFRAME, ESCAPE))
-		{
-			Controller::SetEndGame(true);
-		}
-		if (Key(PRESSEDTHISFRAME, ONE))
-		{
-			Weapons::ChangeShell();
-			if (Weapons::GetWeaponType() == 4) // Sets the entire grid to cursor
-			{
-				for (int y = 0; y < 10; y++)
-					for (int x = 0; x < 10; x++)
-						Controller::EditGrid(selectedGrid, x, y, 4);
-			}
-			else // Resets the grid back to normal
-			{
-				for (int y = 0; y < 10; y++)
-					for (int x = 0; x < 10; x++)
-						Controller::EditGrid(selectedGrid, x, y, oldMatrixData.data[x][y]);
-
-				Controller::EditGrid(selectedGrid, cursorPos.x(), cursorPos.y(), 4);
-			}
-			system("cls"); //Clears & Regenerates the Grid
-			Renderer::GenerateGrid(cursorPos.y(), cursorPos.x());
-		}
-		if (Key(PRESSEDTHISFRAME, TWO))
-		{
-			if (isTargeting && Controller::GetDifficulty() > 1)
-			{
-				if (Weapons::GetWeaponType() < 2)
-					Controller::GetGrid(selectedGrid)->data[cursorPos.x()][cursorPos.y()] = oldMatrixData.data[cursorPos.x()][cursorPos.y()]; // Sets the cursor value back to the original value
-				else // Resets the whole grid back to the original matrix
-				{
-					for (int y = 0; y < 10; y++)
-						for (int x = 0; x < 10; x++)
-							Controller::EditGrid(selectedGrid, x, y, oldMatrixData.data[x][y]);
-				}
-
-				if (Controller::GetDifficulty() == 2) // Changes grid and resets back to the first grid depending on difficultys
-					if (selectedGrid >= 2)
-						selectedGrid = 1;
-					else
-						selectedGrid++;
-				else
-					if (selectedGrid >= 4)
-						selectedGrid = 1;
-					else
-						selectedGrid++;
-				oldMatrixData = *Controller::GetGrid(selectedGrid); // Sets old matrix data to the new grid
-				if (Weapons::GetWeaponType() != 4)
-					Controller::GetGrid(selectedGrid)->data[cursorPos.x()][cursorPos.y()] = 4; // Applies a cursor
-				else // Changes entire grid to cursor
-				{
-					for (int y = 0; y < 10; y++)
-						for (int x = 0; x < 10; x++)
-							Controller::EditGrid(selectedGrid, x, y, 4);
-				}
-				system("cls"); //Clears & Regenerates the Grid
-				Renderer::GenerateGrid(cursorPos.y(), cursorPos.x());
-			}
-		}
-
-		//Peforms an action depending on if you're in targeting mode or not
-		if (Key(PRESSEDTHISFRAME, ENTER))
-		{
-			if (!isTargeting)
-				InsertShip(Controller::GetGrid(selectedGrid));
-			else
-			{
-				Weapons::ShootCoordinates(cursorPos.x(), cursorPos.y()); //Sets the coordinates of the fire location in Weapons
-				switch (Weapons::GetWeaponType()) // Shoots associated weapon depending on the selected weapon
-				{
-				case 0:
-					Weapons::ShootDefaultShell(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
-					cursorLen = 0;
-					break;
-				case 1:
-					Weapons::ShootMissile(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
-					cursorLen = 0;
-					break;
-				case 2:
-					Weapons::ShootRadarShell(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
-					cursorLen = 0;
-					break;
-				case 3:
-					Weapons::AirStrike(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
-					cursorLen = 0;
-					break;
-				case 4:
-					Weapons::NuclearBomb(Controller::GetGrid(selectedGrid), &oldMatrixData, ai);
-					cursorLen = 100;
-					break;
-				}
-			}
-		}
-	}
+	
 
 	/// <summary>
 	/// Clears the cursor by clearing old matrix data grid and resetting cursor length to 0 as well as changing to targeting mode if inputted
