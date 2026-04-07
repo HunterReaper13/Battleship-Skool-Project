@@ -84,7 +84,6 @@ public:
     /// <summary>
     /// Generates the full grid printing both your board and the enemies board with a nice table surrounding it
     /// </summary>
-    /// <param name="debug">Replaces the x's as data values</param>
     static void GenerateGrid(int xPos = 0, int yPos = 0);
 
     /// <summary>
